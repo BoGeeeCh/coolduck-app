@@ -11,7 +11,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
 # =====================================================================
-API_TOKEN = '8601853589:AAFEMdD1OFBjHd93g7DMW5179-y1EMmP5FM'
+API_TOKEN = '8601853589:AAEQZ72TGc-XW4XqKqLVbs-lJffgLZ9IcgY'
 WEB_APP_URL = 'https://bogeeech.github.io/coolduck-app/'
 ADMIN_USERNAME = 'Blabad'
 PORT = 8080
