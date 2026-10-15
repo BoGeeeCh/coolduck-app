@@ -133,7 +133,7 @@
 
   <!-- Вкладка 3: Магазин -->
   <div id="tab-shop" class="tab-content">
-    <div class="balance-box">Баланс: <span class="balanceVal">1000</span> DealDuck_coin</div>
+    <div class="balance-box">Баланс: <span class="balanceVal">300</span> DealDuck_coin</div>
     <h3>Магазин</h3>
     <div class="list-item" style="flex-direction: column; gap: 10px; width: 85%;">
       <div style="font-size: 40px;">🏎️</div>
@@ -205,20 +205,23 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    const currentUserHandle = tg.initDataUnsafe?.user?.username || '';
-    let myBalance = 1000;
+    let myBalance = 300;
     let myNickname = localStorage.getItem('dealduck_nick') || '';
     let showOnlyFriendsInLB = true;
     let lamboOwnerId = null;
     let forcedColor = null;
 
-    // Автоматическая активация кнопки админки для пользователя @Blabad
+    const currentUserHandle = tg.initDataUnsafe?.user?.username || '';
+    const currentUserId = tg.initDataUnsafe?.user?.id || 12345;
+
     if (currentUserHandle.toLowerCase() === 'blabad') {
       document.getElementById('adminNavBtn').style.display = 'block';
     }
 
     if (myNickname) {
       document.getElementById('regModal').style.display = 'none';
+      // Запрашиваем актуальные данные с сервера при входе
+      requestUserData();
     }
 
     function registerUser() {
@@ -233,6 +236,13 @@
         action: 'register',
         nickname: myNickname,
         username: currentUserHandle
+      }));
+    }
+
+    function requestUserData() {
+      tg.sendData(JSON.stringify({
+        action: 'get_user_data',
+        user_id: currentUserId
       }));
     }
 
