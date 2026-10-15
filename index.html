@@ -540,7 +540,40 @@
     }
 
     function closeModal() { document.getElementById('rouletteModal').style.display = 'none'; }
+    
+    function renderEditor() {
+      const container = document.getElementById('editorSectors');
+      container.innerHTML = '';
+      mySectors.forEach((s, i) => {
+        container.innerHTML += `
+          <div class="sector-row">
+            <input type="color" value="${s.color}" onchange="mySectors[${i}].color=this.value">
+            <span style="font-size:12px;">Множитель:</span>
+            <input type="number" value="${s.multiplier}" min="2" style="width:50px; padding:4px; border-radius:4px;" onchange="validateMultiplier(this, ${i})">
+            <div style="display:flex; gap:4px;">
+              <button style="background:#444; color:#fff; border:none; padding:4px 6px; border-radius:4px; cursor:pointer;" onclick="moveSectorUp(${i})">⬆</button>
+              <button style="background:#444; color:#fff; border:none; padding:4px 6px; border-radius:4px; cursor:pointer;" onclick="moveSectorDown(${i})">⬇</button>
+              <button style="background:#FF3B30; color:#fff; border:none; padding:4px 6px; border-radius:4px; cursor:pointer;" onclick="removeSector(${i})">✕</button>
+            </div>
+          </div>`;
+      });
+    }
 
+    function moveSectorUp(index) {
+      if (index === 0) return; // Ужe на самом верху
+      const temp = mySectors[index];
+      mySectors[index] = mySectors[index - 1];
+      mySectors[index - 1] = temp;
+      renderEditor();
+    }
+
+    function moveSectorDown(index) {
+      if (index === mySectors.length - 1) return; // Уже в самом низу
+      const temp = mySectors[index];
+      mySectors[index] = mySectors[index + 1];
+      mySectors[index + 1] = temp;
+      renderEditor();
+    }
     function drawCanvas() {
       const canvas = document.getElementById('rouletteCanvas');
       if (!canvas) return;
