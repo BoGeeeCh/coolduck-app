@@ -1,1 +1,516 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>DealDuck Club</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg-color: #12131C;
+      --card-bg: #1C1D2A;
+      --accent-color: #6C5CE7;
+      --gold-color: #FFD700;
+      --text-color: #FFFFFF;
+      --subtext-color: #A0A5BA;
+    }
 
+    body {
+      margin: 0; padding: 0;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex; flex-direction: column;
+      height: 100vh; overflow: hidden;
+    }
+
+    .nav-bar {
+      display: flex; justify-content: space-around;
+      background: var(--card-bg); padding: 10px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .nav-btn {
+      background: none; border: none; color: var(--subtext-color);
+      font-weight: 600; font-size: 11px; cursor: pointer;
+      padding: 8px 6px; border-radius: 8px;
+    }
+    .nav-btn.active { color: var(--text-color); background: var(--accent-color); }
+
+    .tab-content { display: none; flex: 1; padding: 16px; overflow-y: auto; }
+    .tab-content.active { display: flex; flex-direction: column; align-items: center; }
+
+    .balance-box {
+      background: var(--card-bg); padding: 12px 20px; border-radius: 12px;
+      margin-bottom: 15px; font-weight: bold; font-size: 16px; color: var(--gold-color);
+      border: 1px solid rgba(255, 215, 0, 0.2); width: 85%; text-align: center;
+    }
+
+    .list-container { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 8px; }
+    .list-item {
+      background: var(--card-bg); padding: 12px 16px; border-radius: 10px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+
+    .filter-btn {
+      background: #2D2F45; color: var(--text-color); border: none;
+      padding: 8px 16px; border-radius: 20px; font-size: 12px;
+      margin-bottom: 12px; cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--accent-color); color: #fff; font-weight: bold;
+      border: none; padding: 10px; border-radius: 8px; cursor: pointer;
+    }
+
+    .modal {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center;
+    }
+    .modal-content {
+      background: var(--card-bg); padding: 20px; border-radius: 16px;
+      display: flex; flex-direction: column; align-items: center; width: 85%; max-width: 320px;
+    }
+
+    .pointer {
+      width: 0; height: 0; border-left: 10px solid transparent;
+      border-right: 10px solid transparent; border-top: 20px solid #FF3B30;
+      margin-bottom: -10px; z-index: 10;
+    }
+
+    .badge-lambo {
+      background: linear-gradient(45deg, #FFD700, #FF8C00);
+      color: #000; font-size: 10px; font-weight: bold;
+      padding: 2px 6px; border-radius: 4px; margin-left: 5px;
+    }
+
+    .sector-row {
+      display: flex; gap: 8px; align-items: center; margin-bottom: 8px;
+      background: #232535; padding: 8px; border-radius: 8px;
+    }
+
+    .admin-card {
+      background: #232535; padding: 15px; border-radius: 12px;
+      width: 100%; max-width: 340px; margin-bottom: 12px; box-sizing: border-box;
+      border: 1px solid rgba(108, 92, 231, 0.3);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Модальное окно регистрации игрока -->
+  <div class="modal" id="regModal" style="display: flex; z-index: 200;">
+    <div class="modal-content">
+      <h3>Регистрация</h3>
+      <p style="font-size: 12px; color: var(--subtext-color); text-align: center;">Введите ваш никнейм для входа в игру:</p>
+      <input type="text" id="nicknameInput" placeholder="Ваш никнейм" style="width: 100%; padding: 10px; border-radius: 8px; border: none; background: #2D2F45; color: #fff; margin-bottom: 12px; box-sizing: border-box;">
+      <button class="btn-primary" style="width: 100%;" onclick="registerUser()">Войти в игру</button>
+    </div>
+  </div>
+
+  <!-- Навигационное меню -->
+  <div class="nav-bar">
+    <button class="nav-btn active" onclick="switchTab('friends')">Друзья</button>
+    <button class="nav-btn" onclick="switchTab('all-users')">Все люди</button>
+    <button class="nav-btn" onclick="switchTab('shop')">Магазин</button>
+    <button class="nav-btn" onclick="switchTab('editor')">Редактор</button>
+    <button class="nav-btn" onclick="switchTab('leaderboard')">Топ</button>
+    <button class="nav-btn" id="adminNavBtn" style="display: none; color: #FFD700;" onclick="switchTab('admin')">👑 Админ</button>
+  </div>
+
+  <!-- Вкладка 1: Друзья -->
+  <div id="tab-friends" class="tab-content active">
+    <div class="balance-box">Баланс: <span class="balanceVal">1000</span> DealDuck_coin</div>
+    <h3>Мои Друзья</h3>
+    <div class="list-container" id="friendsOnlyList"></div>
+  </div>
+
+  <!-- Вкладка 2: Все люди -->
+  <div id="tab-all-users" class="tab-content">
+    <h3>Все пользователи</h3>
+    <p style="font-size: 12px; color: var(--subtext-color);">Отметьте галочкой, чтобы добавить в друзья</p>
+    <div class="list-container" id="allUsersList"></div>
+  </div>
+
+  <!-- Вкладка 3: Магазин -->
+  <div id="tab-shop" class="tab-content">
+    <div class="balance-box">Баланс: <span class="balanceVal">1000</span> DealDuck_coin</div>
+    <h3>Магазин</h3>
+    <div class="list-item" style="flex-direction: column; gap: 10px; width: 85%;">
+      <div style="font-size: 40px;">🏎️</div>
+      <div style="font-weight: bold; font-size: 18px;">Lamborghini</div>
+      <div style="color: var(--subtext-color); font-size: 12px; text-align: center;">
+        Первый покупатель навсегда закрепит статус "Первый владелец Lamborghini" в таблице лидеров!
+      </div>
+      <div style="color: var(--gold-color); font-weight: bold;">25 000 DealDuck_coin</div>
+      <button class="btn-primary" style="width: 100%;" onclick="buyLambo()">Купить Lamborghini</button>
+    </div>
+  </div>
+
+  <!-- Вкладка 4: Редактор рулетки -->
+  <div id="tab-editor" class="tab-content">
+    <h3>Конструктор рулетки</h3>
+    <p style="font-size: 11px; color: var(--subtext-color); margin-bottom: 12px;">Минимальный выигрыш x2</p>
+    <div id="editorSectors" style="width: 100%; max-width: 360px;"></div>
+    <button class="btn-primary" style="margin-top: 10px;" onclick="addSector()">+ Добавить сектор</button>
+  </div>
+
+  <!-- Вкладка 5: Таблица лидеров -->
+  <div id="tab-leaderboard" class="tab-content">
+    <h3>Таблица лидеров</h3>
+    <button class="filter-btn" id="lbFilterBtn" onclick="toggleLeaderboardFilter()">Показывать: Только друзья</button>
+    <div class="list-container" id="leaderboardList"></div>
+  </div>
+
+  <!-- Вкладка 6: Панель Администратора (Специально для @Blabad) -->
+  <div id="tab-admin" class="tab-content">
+    <h3 style="color: var(--gold-color);">👑 Панель Администратора</h3>
+    
+    <div class="admin-card">
+      <h4>💰 Изменить DealDuck_coin</h4>
+      <input type="text" id="adminUserTarget" placeholder="@username пользователя" style="width: 100%; padding: 8px; border-radius: 6px; border:none; background:#1C1D2A; color:#fff; margin-bottom: 8px; box-sizing: border-box;">
+      <input type="number" id="adminCoinAmount" placeholder="Новое кол-во коинов" style="width: 100%; padding: 8px; border-radius: 6px; border:none; background:#1C1D2A; color:#fff; margin-bottom: 8px; box-sizing: border-box;">
+      <button class="btn-primary" style="width: 100%; background: #2ECC71;" onclick="adminSetCoins()">Изменить баланс</button>
+    </div>
+
+    <div class="admin-card">
+      <h4>🎯 Подкрутка рулетки (100% шанс)</h4>
+      <p style="font-size: 11px; color: var(--subtext-color);">Выберите цвет, который гарантированно выпадет при следующем вращении:</p>
+      <select id="adminRiggedColor" style="width: 100%; padding: 8px; border-radius: 6px; border:none; background:#1C1D2A; color:#fff; margin-bottom: 8px;">
+        <option value="#1A1A1A">🖤 Чёрный (x2)</option>
+        <option value="#E74C3C">❤️ Красный (x2)</option>
+        <option value="#2ECC71">💚 Зелёный (x3)</option>
+        <option value="#F1C40F">💛 Жёлтый (x5)</option>
+      </select>
+      <button class="btn-primary" style="width: 100%; background: #E74C3C;" onclick="adminRigRoulette()">Подкрутить 100% результат</button>
+    </div>
+  </div>
+
+  <!-- Модальное окно игры -->
+  <div class="modal" id="rouletteModal">
+    <div class="modal-content">
+      <h3 id="modalTitle">Рулетка</h3>
+      <div class="pointer"></div>
+      <canvas id="rouletteCanvas" width="220" height="220"></canvas>
+      
+      <div style="width: 100%; margin-top: 15px; display: flex; flex-direction: column; gap: 8px;">
+        <input type="number" id="betInput" placeholder="Ставка коинов" value="50" style="padding: 8px; border-radius: 6px; border:none; background:#2D2F45; color:#fff;">
+        <select id="colorSelect" style="padding: 8px; border-radius: 6px; border:none; background:#2D2F45; color:#fff;"></select>
+        <button class="btn-primary" onclick="spinRoulette()">Крутить!</button>
+        <button style="background:transparent; color: var(--subtext-color); border:none; padding:5px; cursor:pointer;" onclick="closeModal()">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    const currentUserHandle = tg.initDataUnsafe?.user?.username || '';
+    let myBalance = 1000;
+    let myNickname = localStorage.getItem('dealduck_nick') || '';
+    let showOnlyFriendsInLB = true;
+    let lamboOwnerId = null;
+    let forcedColor = null;
+
+    // Автоматическая активация кнопки админки для пользователя @Blabad
+    if (currentUserHandle.toLowerCase() === 'blabad') {
+      document.getElementById('adminNavBtn').style.display = 'block';
+    }
+
+    if (myNickname) {
+      document.getElementById('regModal').style.display = 'none';
+    }
+
+    function registerUser() {
+      const input = document.getElementById('nicknameInput').value.trim();
+      if (!input) return alert("Введите корректный никнейм!");
+      
+      myNickname = input;
+      localStorage.setItem('dealduck_nick', myNickname);
+      document.getElementById('regModal').style.display = 'none';
+      
+      tg.sendData(JSON.stringify({
+        action: 'register',
+        nickname: myNickname,
+        username: currentUserHandle
+      }));
+    }
+
+    function getDefaultSectors() {
+      let sectors = [];
+      for(let i=0; i<5; i++) sectors.push({ color: '#1A1A1A', multiplier: 2 });
+      for(let i=0; i<5; i++) sectors.push({ color: '#E74C3C', multiplier: 2 });
+      for(let i=0; i<3; i++) sectors.push({ color: '#2ECC71', multiplier: 3 });
+      for(let i=0; i<2; i++) sectors.push({ color: '#F1C40F', multiplier: 5 });
+      return sectors;
+    }
+
+    let mySectors = getDefaultSectors();
+    let users = [];
+
+    function updateBalanceUI() {
+      document.querySelectorAll('.balanceVal').forEach(el => el.innerText = myBalance);
+    }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById(`tab-${tab}`).classList.add('active');
+      event.target.classList.add('active');
+
+      if(tab === 'friends') renderFriendsOnly();
+      if(tab === 'all-users') renderAllUsers();
+      if(tab === 'leaderboard') renderLeaderboard();
+      if(tab === 'editor') renderEditor();
+    }
+
+    function renderFriendsOnly() {
+      const container = document.getElementById('friendsOnlyList');
+      container.innerHTML = '';
+      const friends = users.filter(u => u.isFriend);
+
+      if(friends.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:gray;">У вас пока нет друзей.<br>Отметьте их во вкладке "Все люди".</div>';
+        return;
+      }
+
+      friends.forEach(u => {
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        item.innerHTML = `
+          <span style="font-weight:bold; cursor:pointer;" onclick="openRouletteModal(${u.id})">🎯 ${u.name}</span>
+          <button class="btn-primary" style="font-size:11px; padding:6px 10px;" onclick="sendMyRoulette('${u.name}', true)">Отправить свою</button>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function renderAllUsers() {
+      const container = document.getElementById('allUsersList');
+      container.innerHTML = '';
+      if(users.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:gray;">Пока нет вошедших пользователей.</div>';
+        return;
+      }
+
+      users.forEach(u => {
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        item.innerHTML = `
+          <span>${u.name} (${u.username ? '@'+u.username : 'без юзернейма'})</span>
+          <label style="font-size:12px; cursor:pointer;">
+            <input type="checkbox" ${u.isFriend ? 'checked' : ''} onchange="toggleFriend(${u.id})"> В друзья
+          </label>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function toggleFriend(id) {
+      const u = users.find(x => x.id === id);
+      if(u) u.isFriend = !u.isFriend;
+    }
+
+    function buyLambo() {
+      if(myBalance < 25000) return alert("Недостаточно DealDuck_coin! Нужно 25 000.");
+      myBalance -= 25000;
+      updateBalanceUI();
+
+      if(!lamboOwnerId) {
+        lamboOwnerId = 'ME';
+        alert("🎉 ПОЗДРАВЛЯЕМ! Вы ПЕРВЫЙ владелец Lamborghini!");
+      } else {
+        alert("Вы купили Lamborghini!");
+      }
+    }
+
+    function toggleLeaderboardFilter() {
+      showOnlyFriendsInLB = !showOnlyFriendsInLB;
+      document.getElementById('lbFilterBtn').innerText = showOnlyFriendsInLB ? "Показывать: Только друзья" : "Показывать: Все люди";
+      renderLeaderboard();
+    }
+
+    function renderLeaderboard() {
+      const container = document.getElementById('leaderboardList');
+      container.innerHTML = '';
+      let filtered = showOnlyFriendsInLB ? users.filter(u => u.isFriend) : [...users];
+      
+      filtered.sort((a,b) => b.coins - a.coins);
+
+      filtered.forEach((u, i) => {
+        const item = document.createElement('div');
+        item.className = 'list-item';
+        item.innerHTML = `
+          <div>
+            <b>#${i+1} ${u.name}</b>
+            ${lamboOwnerId === u.id ? '<span class="badge-lambo">🥇 1-й Lambo</span>' : ''}
+          </div>
+          <span style="color:var(--gold-color); font-weight:bold;">${u.coins} 🪙</span>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function renderEditor() {
+      const container = document.getElementById('editorSectors');
+      container.innerHTML = '';
+      mySectors.forEach((s, i) => {
+        container.innerHTML += `
+          <div class="sector-row">
+            <input type="color" value="${s.color}" onchange="mySectors[${i}].color=this.value">
+            <span style="font-size:12px;">Множитель:</span>
+            <input type="number" value="${s.multiplier}" min="2" style="width:50px; padding:4px; border-radius:4px;" onchange="validateMultiplier(this, ${i})">
+            <button style="background:#FF3B30; color:#fff; border:none; padding:4px 8px; border-radius:4px;" onclick="removeSector(${i})">✕</button>
+          </div>`;
+      });
+    }
+
+    function validateMultiplier(input, index) {
+      let val = parseFloat(input.value);
+      if(isNaN(val) || val < 2) {
+        alert("Минимальный множитель выигрыша равен x2!");
+        val = 2;
+        input.value = 2;
+      }
+      mySectors[index].multiplier = val;
+    }
+
+    function addSector() {
+      mySectors.push({ color: '#9B59B6', multiplier: 2 });
+      renderEditor();
+    }
+
+    function removeSector(i) {
+      if(mySectors.length <= 2) return alert("Должно быть минимум 2 сектора!");
+      mySectors.splice(i, 1);
+      renderEditor();
+    }
+
+    function adminSetCoins() {
+      const user = document.getElementById('adminUserTarget').value.trim();
+      const coins = parseInt(document.getElementById('adminCoinAmount').value);
+
+      if(!user || isNaN(coins)) return alert("Заполните корректно юзернейм и баланс!");
+
+      tg.sendData(JSON.stringify({
+        action: 'admin_set_coins',
+        target_username: user.replace('@', ''),
+        new_coins: coins
+      }));
+
+      alert(`Баланс пользователя ${user} изменён на ${coins} DealDuck_coin!`);
+    }
+
+    function adminRigRoulette() {
+      const color = document.getElementById('adminRiggedColor').value;
+      forcedColor = color;
+
+      tg.sendData(JSON.stringify({
+        action: 'admin_rig_roulette',
+        rigged_color: color
+      }));
+
+      alert(`Шанс 100% установлен для цвета: ${color}!`);
+    }
+
+    function sendMyRoulette(targetName, isFriend) {
+      const payload = {
+        action: 'send_roulette',
+        sender_name: myNickname || 'Игрок',
+        target: targetName,
+        is_friend: isFriend,
+        sectors: mySectors
+      };
+
+      tg.sendData(JSON.stringify(payload));
+      alert(`Своя рулетка успешно отправлена пользователю ${targetName}!`);
+    }
+
+    let activeSectors = [];
+    let currentAngle = 0;
+
+    function openRouletteModal(userId) {
+      const friend = users.find(u => u.id === userId);
+      if(!friend) return;
+      activeSectors = friend.sectors || getDefaultSectors();
+      document.getElementById('modalTitle').innerText = `Рулетка: ${friend.name}`;
+      document.getElementById('rouletteModal').style.display = 'flex';
+      
+      const select = document.getElementById('colorSelect');
+      select.innerHTML = '';
+      activeSectors.forEach((s, idx) => {
+        select.innerHTML += `<option value="${idx}">Сектор ${idx+1} (${s.color}) x${s.multiplier}</option>`;
+      });
+
+      drawCanvas();
+    }
+
+    function closeModal() { document.getElementById('rouletteModal').style.display = 'none'; }
+
+    function drawCanvas() {
+      const canvas = document.getElementById('rouletteCanvas');
+      const ctx = canvas.getContext('2d');
+      const arc = (2 * Math.PI) / activeSectors.length;
+
+      ctx.clearRect(0, 0, 220, 220);
+      activeSectors.forEach((s, i) => {
+        const angle = currentAngle + i * arc;
+        ctx.beginPath();
+        ctx.fillStyle = s.color;
+        ctx.moveTo(110, 110);
+        ctx.arc(110, 110, 110, angle, angle + arc);
+        ctx.fill();
+
+        ctx.save();
+        ctx.translate(110, 110);
+        ctx.rotate(angle + arc / 2);
+        ctx.fillStyle = '#FFF';
+        ctx.font = 'bold 12px sans-serif';
+        ctx.fillText(`x${s.multiplier}`, 80, 4);
+        ctx.restore();
+      });
+    }
+
+    function spinRoulette() {
+      const bet = parseInt(document.getElementById('betInput').value);
+      if(bet > myBalance || isNaN(bet) || bet <= 0) return alert("Недостаточно коинов!");
+
+      myBalance -= bet;
+      updateBalanceUI();
+
+      let spins = 5;
+      let totalRot;
+
+      if (forcedColor) {
+        const targetIndex = activeSectors.findIndex(s => s.color.toUpperCase() === forcedColor.toUpperCase());
+        const arc = (2 * Math.PI) / activeSectors.length;
+        if (targetIndex !== -1) {
+          totalRot = spins * Math.PI * 2 + (1.5 * Math.PI - (targetIndex * arc + arc/2));
+        } else {
+          totalRot = spins * Math.PI * 2 + Math.random() * Math.PI * 2;
+        }
+      } else {
+        totalRot = spins * Math.PI * 2 + Math.random() * Math.PI * 2;
+      }
+
+      let start = null;
+
+      function anim(t) {
+        if(!start) start = t;
+        let progress = (t - start) / 3000;
+        if(progress < 1) {
+          currentAngle = totalRot * (1 - Math.pow(1 - progress, 3));
+          drawCanvas();
+          requestAnimationFrame(anim);
+        } else {
+          alert("Вращение завершено!");
+          forcedColor = null;
+        }
+      }
+      requestAnimationFrame(anim);
+    }
+
+    updateBalanceUI();
+  </script>
+</body>
+</html>
