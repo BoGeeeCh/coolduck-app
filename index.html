@@ -392,9 +392,16 @@
 
       if(!user || isNaN(coins)) return alert("Заполните корректно юзернейм и баланс!");
 
+      // Если меняем баланс самому себе (@Blabad) — сразу обновляем интерфейс!
+      const targetClean = user.replace('@', '').toLowerCase();
+      if (targetClean === currentUserHandle.toLowerCase()) {
+        myBalance = coins;
+        updateBalanceUI();
+      }
+
       tg.sendData(JSON.stringify({
         action: 'admin_set_coins',
-        target_username: user.replace('@', ''),
+        target_username: targetClean,
         new_coins: coins
       }));
 
