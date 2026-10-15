@@ -283,7 +283,33 @@
 
     let mySectors = getDefaultSectors();
 
-    // Синхронизация данных с сервером каждые 30 секунд
+// Ссылка на ваш API (при локальной разработке через ngrok здесь будет ваша внешняя https ссылка)
+    const API_URL = 'http://localhost:8080/api'; 
+
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    const currentUserHandle = tg.initDataUnsafe?.user?.username || '';
+    const currentUserId = tg.initDataUnsafe?.user?.id || Date.now();
+    
+    let myBalance = 300;
+    let myNickname = localStorage.getItem('dealduck_nick') || '';
+    let lamboOwnerId = null;
+    let forcedColor = null;
+    let users = [];
+
+    function getDefaultSectors() {
+      let sectors = [];
+      for(let i=0; i<5; i++) sectors.push({ color: '#1A1A1A', multiplier: 2 });
+      for(let i=0; i<5; i++) sectors.push({ color: '#E74C3C', multiplier: 2 });
+      for(let i=0; i<3; i++) sectors.push({ color: '#2ECC71', multiplier: 3 });
+      for(let i=0; i<2; i++) sectors.push({ color: '#F1C40F', multiplier: 5 });
+      return sectors;
+    }
+
+    let mySectors = getDefaultSectors();
+
+    // Синхронизация и проверка наличия себя в базе сервера при каждом запросе
     async function syncDataWithServer() {
       try {
         const res = await fetch(`${API_URL}/users`);
@@ -295,9 +321,16 @@
             sectors: getDefaultSectors()
           }));
 
+          // Проверяем, есть ли текущий пользователь на сервере
           const me = users.find(u => u.id === currentUserId || (u.username && u.username.toLowerCase() === currentUserHandle.toLowerCase()));
-          if (me) {
+          
+          if (!me) {
+            // Если в базе сервера нас нет (например, базу удалили), принудительно открываем окно регистрации
+            document.getElementById('regModal').style.display = 'flex';
+          } else {
+            // Если есть, обновляем баланс и скрываем окно
             myBalance = me.coins;
+            document.getElementById('regModal').style.display = 'none';
             updateBalanceUI();
           }
 
@@ -314,9 +347,10 @@
       document.getElementById('adminNavBtn').style.display = 'flex';
     }
 
-    if (myNickname) {
-      document.getElementById('regModal').style.display = 'none';
-    }
+    // Первичный запуск при открытии приложения
+    syncDataWithServer();
+    // Автообновление каждые 30 секунд
+    setInterval(syncDataWithServer, 30000);
 
     async function registerUser() {
       const input = document.getElementById('nicknameInput').value.trim();
@@ -325,7 +359,7 @@
       myNickname = input;
       localStorage.setItem('dealduck_nick', myNickname);
       document.getElementById('regModal').style.display = 'none';
-    
+
       try {
         await fetch(`${API_URL}/register`, {
           method: 'POST',
@@ -337,9 +371,9 @@
           })
         });
       } catch (e) {
-        console.error("Ошибка при регистрации на сервере:", e);
+        console.error("Ошибка регистрации:", e);
       }
-    
+
       syncDataWithServer();
     }
     
