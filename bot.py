@@ -166,17 +166,24 @@ def setup_app():
 async def main():
     logging.basicConfig(level=logging.INFO)
     scheduler.start()
-
+    
     app = setup_app()
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', PORT)
-    await site.start()
-    logging.info(f"🌐 API Сервер запущен на порту {PORT}")
     
-    await bot.delete_webhook(drop_pending_updates=True)
+    # Render передает порт через системную переменную PORT
+    port = int(os.environ.get("PORT", 8080))
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    logging.info(f"API Сервер запущен на порту {port}")
+    
+    # Убираем dp.start_polling(bot), так как работает aiohttp сервер!
+    # Если боту нужно отправлять сообщения по расписанию, он может делать это через бота без start_polling.
+    
+    await asyncio.Event().wait()
 
-    await dp.start_polling(bot)
+if __name__ == '__main__':
+    asyncio.run(main())
 
 if __name__ == '__main__':
     asyncio.run(main())
