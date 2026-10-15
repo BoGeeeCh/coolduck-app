@@ -9,6 +9,7 @@ from aiohttp import web
 import aiohttp_cors
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+import os
 
 # =====================================================================
 API_TOKEN = '8601853589:AAEQZ72TGc-XW4XqKqLVbs-lJffgLZ9IcgY'
@@ -179,7 +180,7 @@ async def main():
     
     # Убираем dp.start_polling(bot), так как работает aiohttp сервер!
     # Если боту нужно отправлять сообщения по расписанию, он может делать это через бота без start_polling.
-    
+
     await asyncio.Event().wait()
 
 if __name__ == '__main__':
