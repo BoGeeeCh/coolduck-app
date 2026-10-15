@@ -379,17 +379,34 @@
       const container = document.getElementById('allUsersList');
       container.innerHTML = '';
       
-      users.forEach(u => {
+      if(users.length === 0) {
+        container.innerHTML = '<div style="text-align:center; color:gray;">Список пользователей пуст.</div>';
+        return;
+      }
+
+      users.forEach((u, index) => {
         const item = document.createElement('div');
         item.className = 'list-item';
         item.innerHTML = `
           <span>${u.name} (${u.username ? '@'+u.username : 'нет юзернейма'})</span>
-          <label style="font-size:12px; cursor:pointer;">
-            <input type="checkbox" ${u.isFriend ? 'checked' : ''} onchange="toggleFriend(${u.id})"> В друзья
-          </label>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <label style="font-size:12px; cursor:pointer;">
+              <input type="checkbox" ${u.isFriend ? 'checked' : ''} onchange="toggleFriend(${u.id})"> В друзья
+            </label>
+            <button style="background:#FF3B30; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;" onclick="deleteUser(${u.id})">✕</button>
+          </div>
         `;
         container.appendChild(item);
       });
+    }
+
+    function deleteUser(id) {
+      if(confirm("Вы уверены, что хотите удалить этого пользователя из топа?")) {
+        users = users.filter(u => u.id !== id);
+        saveUsers();
+        renderAllUsers();
+        renderLeaderboard();
+      }
     }
 
     function toggleFriend(id) {
