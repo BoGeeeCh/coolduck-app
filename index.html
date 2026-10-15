@@ -325,19 +325,53 @@
       myNickname = input;
       localStorage.setItem('dealduck_nick', myNickname);
       document.getElementById('regModal').style.display = 'none';
-
-      await fetch(`${API_URL}/register`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: currentUserId,
-          nickname: myNickname,
-          username: currentUserHandle
-        })
-      });
-
+    
+      try {
+        await fetch(`${API_URL}/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: currentUserId,
+            nickname: myNickname,
+            username: currentUserHandle.toLowerCase()
+          })
+        });
+      } catch (e) {
+        console.error("Ошибка при регистрации на сервере:", e);
+      }
+    
       syncDataWithServer();
     }
+    
+    async function adminSetCoins() {
+      const user = document.getElementById('adminUserTarget').value.trim();
+      const coins = parseInt(document.getElementById('adminCoinAmount').value);
+    
+      if(!user || isNaN(coins)) return alert("Заполните юзернейм и баланс!");
+      const cleanUser = user.replace('@', '').toLowerCase();
+    
+      try {
+        const res = await fetch(`${API_URL}/admin/set-coins`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            admin_username: currentUserHandle.toLowerCase(),
+            target_username: cleanUser,
+            new_coins: coins
+          })
+        });
+
+    const resData = await res.json();
+    if (resData.status === 'ok') {
+      alert(`Баланс @${cleanUser} успешно изменён на ${coins}!`);
+      syncDataWithServer();
+    } else {
+      alert("Ошибка! Проверьте права администратора.");
+    }
+  } catch (e) {
+    alert("Не удалось связаться с сервером API!");
+  }
+}
 
     function updateBalanceUI() {
       document.querySelectorAll('.balanceVal').forEach(el => el.innerText = myBalance);
