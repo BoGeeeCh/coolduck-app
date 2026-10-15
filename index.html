@@ -2,249 +2,274 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DealDuck Club</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
-      --bg-color: #12131C;
-      --card-bg: #1C1D2A;
-      --accent-color: #6C5CE7;
-      --gold-color: #FFD700;
+      --bg-color: #121212;
+      --card-bg: #1E1E1E;
+      --accent-color: #0088cc;
       --text-color: #FFFFFF;
-      --subtext-color: #A0A5BA;
+      --gold-color: #FFD700;
     }
 
     body {
-      margin: 0; padding: 0;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       background-color: var(--bg-color);
       color: var(--text-color);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      display: flex; flex-direction: column;
-      height: 100vh; overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
     }
 
-    .nav-bar {
-      display: flex; justify-content: space-around;
-      background: var(--card-bg); padding: 10px 0;
-      border-bottom: 1px solid rgba(255,255,255,0.05);
+    .header {
+      padding: 15px;
+      text-align: center;
+      background-color: var(--card-bg);
+      font-size: 20px;
+      font-weight: bold;
+      border-bottom: 1px solid #2A2A2A;
     }
-    .nav-btn {
-      background: none; border: none; color: var(--subtext-color);
-      font-weight: 600; font-size: 11px; cursor: pointer;
-      padding: 8px 6px; border-radius: 8px;
-    }
-    .nav-btn.active { color: var(--text-color); background: var(--accent-color); }
-
-    .tab-content { display: none; flex: 1; padding: 16px; overflow-y: auto; }
-    .tab-content.active { display: flex; flex-direction: column; align-items: center; }
 
     .balance-box {
-      background: var(--card-bg); padding: 12px 20px; border-radius: 12px;
-      margin-bottom: 15px; font-weight: bold; font-size: 16px; color: var(--gold-color);
-      border: 1px solid rgba(255, 215, 0, 0.2); width: 85%; text-align: center;
+      background: linear-gradient(135deg, #2A2A2A, #1A1A1A);
+      margin: 15px;
+      padding: 15px;
+      border-radius: 12px;
+      text-align: center;
+      font-size: 18px;
+      border: 1px solid #333;
     }
 
-    .list-container { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 8px; }
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 15px 80px 15px;
+    }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 65px;
+      background-color: var(--card-bg);
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      border-top: 1px solid #2A2A2A;
+    }
+
+    .nav-btn {
+      background: none;
+      border: none;
+      color: #888;
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+    }
+
+    .nav-btn.active { color: var(--accent-color); }
+
     .list-item {
-      background: var(--card-bg); padding: 12px 16px; border-radius: 10px;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-
-    .filter-btn {
-      background: #2D2F45; color: var(--text-color); border: none;
-      padding: 8px 16px; border-radius: 20px; font-size: 12px;
-      margin-bottom: 12px; cursor: pointer;
+      background: var(--card-bg);
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .btn-primary {
-      background: var(--accent-color); color: #fff; font-weight: bold;
-      border: none; padding: 10px; border-radius: 8px; cursor: pointer;
+      background: var(--accent-color);
+      color: #fff;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      width: 100%;
     }
 
-    .modal {
-      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center;
-    }
-    .modal-content {
-      background: var(--card-bg); padding: 20px; border-radius: 16px;
-      display: flex; flex-direction: column; align-items: center; width: 85%; max-width: 320px;
-    }
-
-    .pointer {
-      width: 0; height: 0; border-left: 10px solid transparent;
-      border-right: 10px solid transparent; border-top: 20px solid #FF3B30;
-      margin-bottom: -10px; z-index: 10;
+    .input-field {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      border: 1px solid #333;
+      background: #252525;
+      color: #fff;
+      box-sizing: border-box;
     }
 
-    .badge-lambo {
-      background: linear-gradient(45deg, #FFD700, #FF8C00);
-      color: #000; font-size: 10px; font-weight: bold;
-      padding: 2px 6px; border-radius: 4px; margin-left: 5px;
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .modal-card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 12px;
+      width: 85%;
+      max-width: 350px;
+      text-align: center;
     }
 
     .sector-row {
-      display: flex; gap: 8px; align-items: center; margin-bottom: 8px;
-      background: #232535; padding: 8px; border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      background: #252525;
+      padding: 8px;
+      border-radius: 6px;
     }
 
-    .admin-card {
-      background: #232535; padding: 15px; border-radius: 12px;
-      width: 100%; max-width: 340px; margin-bottom: 12px; box-sizing: border-box;
-      border: 1px solid rgba(108, 92, 231, 0.3);
+    .badge-lambo {
+      background: var(--gold-color);
+      color: #000;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+      margin-left: 5px;
     }
   </style>
 </head>
 <body>
 
-  <!-- Модальное окно регистрации игрока -->
-  <div class="modal" id="regModal" style="display: flex; z-index: 200;">
-    <div class="modal-content">
-      <h3>Регистрация</h3>
-      <p style="font-size: 12px; color: var(--subtext-color); text-align: center;">Введите ваш никнейм для входа в игру:</p>
-      <input type="text" id="nicknameInput" placeholder="Ваш никнейм" style="width: 100%; padding: 10px; border-radius: 8px; border: none; background: #2D2F45; color: #fff; margin-bottom: 12px; box-sizing: border-box;">
-      <button class="btn-primary" style="width: 100%;" onclick="registerUser()">Войти в игру</button>
+  <div class="header">DealDuck Club 🦆</div>
+
+  <div class="main-content">
+    <!-- 1. Вкладка ДРУЗЬЯ -->
+    <div id="tab-friends" class="tab-content active">
+      <div class="balance-box">Баланс: <span class="balanceVal">300</span> DealDuck_coin</div>
+      <h3>Ваши друзья</h3>
+      <div id="friendsOnlyList"></div>
     </div>
-  </div>
 
-  <!-- Навигационное меню -->
-  <div class="nav-bar">
-    <button class="nav-btn active" onclick="switchTab('friends')">Друзья</button>
-    <button class="nav-btn" onclick="switchTab('all-users')">Все люди</button>
-    <button class="nav-btn" onclick="switchTab('shop')">Магазин</button>
-    <button class="nav-btn" onclick="switchTab('editor')">Редактор</button>
-    <button class="nav-btn" onclick="switchTab('leaderboard')">Топ</button>
-    <button class="nav-btn" id="adminNavBtn" style="display: none; color: #FFD700;" onclick="switchTab('admin')">👑 Админ</button>
-  </div>
+    <!-- 2. Вкладка ВСЕ ЛЮДИ -->
+    <div id="tab-all-users" class="tab-content">
+      <h3>Все пользователи</h3>
+      <div id="allUsersList"></div>
+    </div>
 
-  <!-- Вкладка 1: Друзья -->
-  <div id="tab-friends" class="tab-content active">
-    <div class="balance-box">Баланс: <span class="balanceVal">1000</span> DealDuck_coin</div>
-    <h3>Мои Друзья</h3>
-    <div class="list-container" id="friendsOnlyList"></div>
-  </div>
-
-  <!-- Вкладка 2: Все люди -->
-  <div id="tab-all-users" class="tab-content">
-    <h3>Все пользователи</h3>
-    <p style="font-size: 12px; color: var(--subtext-color);">Отметьте галочкой, чтобы добавить в друзья</p>
-    <div class="list-container" id="allUsersList"></div>
-  </div>
-
-  <!-- Вкладка 3: Магазин -->
-  <div id="tab-shop" class="tab-content">
-    <div class="balance-box">Баланс: <span class="balanceVal">300</span> DealDuck_coin</div>
-    <h3>Магазин</h3>
-    <div class="list-item" style="flex-direction: column; gap: 10px; width: 85%;">
-      <div style="font-size: 40px;">🏎️</div>
-      <div style="font-weight: bold; font-size: 18px;">Lamborghini</div>
-      <div style="color: var(--subtext-color); font-size: 12px; text-align: center;">
-        Первый покупатель навсегда закрепит статус "Первый владелец Lamborghini" в таблице лидеров!
+    <!-- 3. Вкладка МАГАЗИН -->
+    <div id="tab-shop" class="tab-content">
+      <div class="balance-box">Баланс: <span class="balanceVal">300</span> DealDuck_coin</div>
+      <h3>Магазин</h3>
+      <div class="list-item" style="flex-direction: column; align-items: flex-start; gap: 10px;">
+        <div>
+          <strong>🏎️ Lamborghini</strong>
+          <div style="font-size:12px; color:#aaa;">Стоимость: 25 000 DealDuck_coin</div>
+          <div style="font-size:11px; color:var(--gold-color);">Первый покупатель получит уникальную плашку!</div>
+        </div>
+        <button class="btn-primary" onclick="buyLambo()">Купить</button>
       </div>
-      <div style="color: var(--gold-color); font-weight: bold;">25 000 DealDuck_coin</div>
-      <button class="btn-primary" style="width: 100%;" onclick="buyLambo()">Купить Lamborghini</button>
-    </div>
-  </div>
-
-  <!-- Вкладка 4: Редактор рулетки -->
-  <div id="tab-editor" class="tab-content">
-    <h3>Конструктор рулетки</h3>
-    <p style="font-size: 11px; color: var(--subtext-color); margin-bottom: 12px;">Минимальный выигрыш x2</p>
-    <div id="editorSectors" style="width: 100%; max-width: 360px;"></div>
-    <button class="btn-primary" style="margin-top: 10px;" onclick="addSector()">+ Добавить сектор</button>
-  </div>
-
-  <!-- Вкладка 5: Таблица лидеров -->
-  <div id="tab-leaderboard" class="tab-content">
-    <h3>Таблица лидеров</h3>
-    <button class="filter-btn" id="lbFilterBtn" onclick="toggleLeaderboardFilter()">Показывать: Только друзья</button>
-    <div class="list-container" id="leaderboardList"></div>
-  </div>
-
-  <!-- Вкладка 6: Панель Администратора (Специально для @Blabad) -->
-  <div id="tab-admin" class="tab-content">
-    <h3 style="color: var(--gold-color);">👑 Панель Администратора</h3>
-    
-    <div class="admin-card">
-      <h4>💰 Изменить DealDuck_coin</h4>
-      <input type="text" id="adminUserTarget" placeholder="@username пользователя" style="width: 100%; padding: 8px; border-radius: 6px; border:none; background:#1C1D2A; color:#fff; margin-bottom: 8px; box-sizing: border-box;">
-      <input type="number" id="adminCoinAmount" placeholder="Новое кол-во коинов" style="width: 100%; padding: 8px; border-radius: 6px; border:none; background:#1C1D2A; color:#fff; margin-bottom: 8px; box-sizing: border-box;">
-      <button class="btn-primary" style="width: 100%; background: #2ECC71;" onclick="adminSetCoins()">Изменить баланс</button>
     </div>
 
-    <div class="admin-card">
-      <h4>🎯 Подкрутка рулетки (100% шанс)</h4>
-      <p style="font-size: 11px; color: var(--subtext-color);">Выберите цвет, который гарантированно выпадет при следующем вращении:</p>
-      <select id="adminRiggedColor" style="width: 100%; padding: 8px; border-radius: 6px; border:none; background:#1C1D2A; color:#fff; margin-bottom: 8px;">
-        <option value="#1A1A1A">🖤 Чёрный (x2)</option>
-        <option value="#E74C3C">❤️ Красный (x2)</option>
-        <option value="#2ECC71">💚 Зелёный (x3)</option>
-        <option value="#F1C40F">💛 Жёлтый (x5)</option>
-      </select>
-      <button class="btn-primary" style="width: 100%; background: #E74C3C;" onclick="adminRigRoulette()">Подкрутить 100% результат</button>
+    <!-- 4. Вкладка ТОП ИГРОКОВ -->
+    <div id="tab-leaderboard" class="tab-content">
+      <h3>Таблица лидеров</h3>
+      <button class="btn-primary" id="lbFilterBtn" style="margin-bottom:15px;" onclick="toggleLeaderboardFilter()">Показывать: Все люди</button>
+      <div id="leaderboardList"></div>
     </div>
-  </div>
 
-  <!-- Модальное окно игры -->
-  <div class="modal" id="rouletteModal">
-    <div class="modal-content">
-      <h3 id="modalTitle">Рулетка</h3>
-      <div class="pointer"></div>
-      <canvas id="rouletteCanvas" width="220" height="220"></canvas>
+    <!-- 5. Вкладка РЕДАКТОР РУЛЕТКИ -->
+    <div id="tab-editor" class="tab-content">
+      <h3>Редактор секторов</h3>
+      <div id="editorSectors"></div>
+      <button class="btn-primary" style="margin-top:10px;" onclick="addSector()">+ Добавить сектор</button>
+    </div>
+
+    <!-- 6. Вкладка АДМИНКА (@Blabad) -->
+    <div id="tab-admin" class="tab-content">
+      <h3 style="color:var(--gold-color);">👑 Админ-панель</h3>
       
-      <div style="width: 100%; margin-top: 15px; display: flex; flex-direction: column; gap: 8px;">
-        <input type="number" id="betInput" placeholder="Ставка коинов" value="50" style="padding: 8px; border-radius: 6px; border:none; background:#2D2F45; color:#fff;">
-        <select id="colorSelect" style="padding: 8px; border-radius: 6px; border:none; background:#2D2F45; color:#fff;"></select>
-        <button class="btn-primary" onclick="spinRoulette()">Крутить!</button>
-        <button style="background:transparent; color: var(--subtext-color); border:none; padding:5px; cursor:pointer;" onclick="closeModal()">Закрыть</button>
+      <div style="background:#252525; padding:15px; border-radius:8px; margin-bottom:15px;">
+        <h4>Выдать/изменить коины</h4>
+        <input type="text" id="adminUserTarget" class="input-field" placeholder="@username игрока">
+        <input type="number" id="adminCoinAmount" class="input-field" placeholder="Количество коинов">
+        <button class="btn-primary" onclick="adminSetCoins()">Изменить баланс</button>
+      </div>
+
+      <div style="background:#252525; padding:15px; border-radius:8px;">
+        <h4>🎯 Подкрутка рулетки (100% выигрыш)</h4>
+        <label style="font-size:12px;">Выберите цвет для победы:</label>
+        <select id="adminRiggedColor" class="input-field" style="margin-top:5px;">
+          <option value="#1A1A1A">Чёрный (#1A1A1A)</option>
+          <option value="#E74C3C">Красный (#E74C3C)</option>
+          <option value="#2ECC71">Зелёный (#2ECC71)</option>
+          <option value="#F1C40F">Жёлтый (#F1C40F)</option>
+        </select>
+        <button class="btn-primary" style="background:#E74C3C;" onclick="adminRigRoulette()">Установить 100% шанс</button>
       </div>
     </div>
+  </div>
+
+  <!-- Модальное окно регистрации -->
+  <div id="regModal" class="modal-overlay">
+    <div class="modal-card">
+      <h2>Добро пожаловать!</h2>
+      <p style="font-size:13px; color:#aaa;">Введите ваш игровой никнейм для начала игры:</p>
+      <input type="text" id="nicknameInput" class="input-field" placeholder="Ваш никнейм">
+      <button class="btn-primary" onclick="registerUser()">Сохранить</button>
+    </div>
+  </div>
+
+  <!-- Модальное окно вращения рулетки -->
+  <div id="rouletteModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+      <h3 id="modalTitle">Рулетка</h3>
+      <canvas id="rouletteCanvas" width="220" height="220" style="margin:10px 0;"></canvas>
+      <input type="number" id="betInput" class="input-field" placeholder="Размер ставки (коины)" value="50">
+      <label style="font-size:12px;">Выберите сектор:</label>
+      <select id="colorSelect" class="input-field" style="margin-top:5px;"></select>
+      <button class="btn-primary" style="margin-bottom:8px;" onclick="spinRoulette()">Крутить!</button>
+      <button class="btn-primary" style="background:#555;" onclick="closeModal()">Закрыть</button>
+    </div>
+  </div>
+
+  <!-- Нижнее меню навигации -->
+  <div class="nav-bar">
+    <button class="nav-btn active" onclick="switchTab('friends')">👥<span>Друзья</span></button>
+    <button class="nav-btn" onclick="switchTab('all-users')">🌐<span>Все</span></button>
+    <button class="nav-btn" onclick="switchTab('shop')">🛒<span>Магазин</span></button>
+    <button class="nav-btn" onclick="switchTab('leaderboard')">🏆<span>Топ</span></button>
+    <button class="nav-btn" onclick="switchTab('editor')">🎨<span>Сектора</span></button>
+    <button class="nav-btn" id="adminNavBtn" style="display:none; color:var(--gold-color);" onclick="switchTab('admin')">👑<span>Админ</span></button>
   </div>
 
   <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    let myBalance = 300;
+    const currentUserHandle = tg.initDataUnsafe?.user?.username || 'Blabad';
+    const currentUserId = tg.initDataUnsafe?.user?.id || Date.now();
+    
+    let myBalance = parseInt(localStorage.getItem('dealduck_balance')) || 300;
     let myNickname = localStorage.getItem('dealduck_nick') || '';
-    let showOnlyFriendsInLB = true;
+    let showOnlyFriendsInLB = false;
     let lamboOwnerId = null;
     let forcedColor = null;
 
-    const currentUserHandle = tg.initDataUnsafe?.user?.username || '';
-    const currentUserId = tg.initDataUnsafe?.user?.id || 12345;
-
-    if (currentUserHandle.toLowerCase() === 'blabad') {
-      document.getElementById('adminNavBtn').style.display = 'block';
-    }
-
-    if (myNickname) {
-      document.getElementById('regModal').style.display = 'none';
-      // Запрашиваем актуальные данные с сервера при входе
-      requestUserData();
-    }
-
-    function registerUser() {
-      const input = document.getElementById('nicknameInput').value.trim();
-      if (!input) return alert("Введите корректный никнейм!");
-      
-      myNickname = input;
-      localStorage.setItem('dealduck_nick', myNickname);
-      document.getElementById('regModal').style.display = 'none';
-      
-      tg.sendData(JSON.stringify({
-        action: 'register',
-        nickname: myNickname,
-        username: currentUserHandle
-      }));
-    }
-
-    function requestUserData() {
-      tg.sendData(JSON.stringify({
-        action: 'get_user_data',
-        user_id: currentUserId
-      }));
-    }
+    let users = JSON.parse(localStorage.getItem('dealduck_global_users')) || [];
 
     function getDefaultSectors() {
       let sectors = [];
@@ -256,17 +281,72 @@
     }
 
     let mySectors = getDefaultSectors();
-    let users = [];
+
+    function ensureSelfInUsers() {
+      let me = users.find(u => u.username && u.username.toLowerCase() === currentUserHandle.toLowerCase());
+      if (me) {
+        me.coins = myBalance;
+        if (myNickname) me.name = myNickname;
+      } else if (currentUserHandle) {
+        users.push({
+          id: currentUserId,
+          name: myNickname || currentUserHandle,
+          username: currentUserHandle,
+          coins: myBalance,
+          isFriend: true,
+          sectors: getDefaultSectors()
+        });
+      }
+      saveUsers();
+    }
+
+    if (currentUserHandle.toLowerCase() === 'blabad') {
+      document.getElementById('adminNavBtn').style.display = 'flex';
+    }
+
+    if (myNickname) {
+      document.getElementById('regModal').style.display = 'none';
+      ensureSelfInUsers();
+    }
+
+    function registerUser() {
+      const input = document.getElementById('nicknameInput').value.trim();
+      if (!input) return alert("Введите корректный никнейм!");
+      
+      myNickname = input;
+      localStorage.setItem('dealduck_nick', myNickname);
+      document.getElementById('regModal').style.display = 'none';
+      
+      ensureSelfInUsers();
+
+      tg.sendData(JSON.stringify({
+        action: 'register',
+        nickname: myNickname,
+        username: currentUserHandle
+      }));
+    }
+
+    function saveBalance() {
+      localStorage.setItem('dealduck_balance', myBalance);
+      let me = users.find(u => u.username && u.username.toLowerCase() === currentUserHandle.toLowerCase());
+      if (me) me.coins = myBalance;
+      saveUsers();
+    }
+
+    function saveUsers() {
+      localStorage.setItem('dealduck_global_users', JSON.stringify(users));
+    }
 
     function updateBalanceUI() {
       document.querySelectorAll('.balanceVal').forEach(el => el.innerText = myBalance);
+      saveBalance();
     }
 
     function switchTab(tab) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
       document.getElementById(`tab-${tab}`).classList.add('active');
-      event.target.classList.add('active');
+      event.currentTarget.classList.add('active');
 
       if(tab === 'friends') renderFriendsOnly();
       if(tab === 'all-users') renderAllUsers();
@@ -280,7 +360,7 @@
       const friends = users.filter(u => u.isFriend);
 
       if(friends.length === 0) {
-        container.innerHTML = '<div style="text-align:center; color:gray;">У вас пока нет друзей.<br>Отметьте их во вкладке "Все люди".</div>';
+        container.innerHTML = '<div style="text-align:center; color:gray;">У вас пока нет друзей. Добавьте их во вкладке "Все люди".</div>';
         return;
       }
 
@@ -289,7 +369,7 @@
         item.className = 'list-item';
         item.innerHTML = `
           <span style="font-weight:bold; cursor:pointer;" onclick="openRouletteModal(${u.id})">🎯 ${u.name}</span>
-          <button class="btn-primary" style="font-size:11px; padding:6px 10px;" onclick="sendMyRoulette('${u.name}', true)">Отправить свою</button>
+          <button class="btn-primary" style="font-size:11px; padding:6px 10px; width:auto;" onclick="sendMyRoulette('${u.name}', true)">Отправить свою</button>
         `;
         container.appendChild(item);
       });
@@ -298,16 +378,12 @@
     function renderAllUsers() {
       const container = document.getElementById('allUsersList');
       container.innerHTML = '';
-      if(users.length === 0) {
-        container.innerHTML = '<div style="text-align:center; color:gray;">Пока нет вошедших пользователей.</div>';
-        return;
-      }
-
+      
       users.forEach(u => {
         const item = document.createElement('div');
         item.className = 'list-item';
         item.innerHTML = `
-          <span>${u.name} (${u.username ? '@'+u.username : 'без юзернейма'})</span>
+          <span>${u.name} (${u.username ? '@'+u.username : 'нет юзернейма'})</span>
           <label style="font-size:12px; cursor:pointer;">
             <input type="checkbox" ${u.isFriend ? 'checked' : ''} onchange="toggleFriend(${u.id})"> В друзья
           </label>
@@ -318,7 +394,10 @@
 
     function toggleFriend(id) {
       const u = users.find(x => x.id === id);
-      if(u) u.isFriend = !u.isFriend;
+      if(u) {
+        u.isFriend = !u.isFriend;
+        saveUsers();
+      }
     }
 
     function buyLambo() {
@@ -327,7 +406,7 @@
       updateBalanceUI();
 
       if(!lamboOwnerId) {
-        lamboOwnerId = 'ME';
+        lamboOwnerId = currentUserHandle;
         alert("🎉 ПОЗДРАВЛЯЕМ! Вы ПЕРВЫЙ владелец Lamborghini!");
       } else {
         alert("Вы купили Lamborghini!");
@@ -341,10 +420,11 @@
     }
 
     function renderLeaderboard() {
+      ensureSelfInUsers();
       const container = document.getElementById('leaderboardList');
       container.innerHTML = '';
-      let filtered = showOnlyFriendsInLB ? users.filter(u => u.isFriend) : [...users];
       
+      let filtered = showOnlyFriendsInLB ? users.filter(u => u.isFriend) : [...users];
       filtered.sort((a,b) => b.coins - a.coins);
 
       filtered.forEach((u, i) => {
@@ -352,8 +432,8 @@
         item.className = 'list-item';
         item.innerHTML = `
           <div>
-            <b>#${i+1} ${u.name}</b>
-            ${lamboOwnerId === u.id ? '<span class="badge-lambo">🥇 1-й Lambo</span>' : ''}
+            <b>#${i+1} ${u.name}</b> ${u.username === currentUserHandle ? '(Вы)' : ''}
+            ${lamboOwnerId === u.username ? '<span class="badge-lambo">🥇 1-й Lambo</span>' : ''}
           </div>
           <span style="color:var(--gold-color); font-weight:bold;">${u.coins} 🪙</span>
         `;
@@ -396,38 +476,47 @@
       renderEditor();
     }
 
+    // --- АДМИН-ФУНКЦИИ ---
     function adminSetCoins() {
       const user = document.getElementById('adminUserTarget').value.trim();
       const coins = parseInt(document.getElementById('adminCoinAmount').value);
 
       if(!user || isNaN(coins)) return alert("Заполните корректно юзернейм и баланс!");
 
-      // Если меняем баланс самому себе (@Blabad) — сразу обновляем интерфейс!
-      const targetClean = user.replace('@', '').toLowerCase();
-      if (targetClean === currentUserHandle.toLowerCase()) {
-        myBalance = coins;
-        updateBalanceUI();
+      const cleanUser = user.replace('@', '').toLowerCase();
+      let targetObj = users.find(u => u.username && u.username.toLowerCase() === cleanUser);
+      
+      if(targetObj) {
+        targetObj.coins = coins;
+        if(cleanUser === currentUserHandle.toLowerCase()) {
+          myBalance = coins;
+          updateBalanceUI();
+        }
+        saveUsers();
+        alert(`Баланс пользователя @${cleanUser} изменён на ${coins} коинов!`);
+      } else {
+        users.push({ id: Date.now(), name: user, username: cleanUser, coins: coins, isFriend: true, sectors: getDefaultSectors() });
+        saveUsers();
+        alert(`Пользователь @${cleanUser} добавлен в топ с балансом ${coins}!`);
       }
 
       tg.sendData(JSON.stringify({
         action: 'admin_set_coins',
-        target_username: targetClean,
+        target_username: cleanUser,
         new_coins: coins
       }));
-
-      alert(`Баланс пользователя ${user} изменён на ${coins} DealDuck_coin!`);
     }
 
     function adminRigRoulette() {
       const color = document.getElementById('adminRiggedColor').value;
       forcedColor = color;
-
+      
       tg.sendData(JSON.stringify({
         action: 'admin_rig_roulette',
         rigged_color: color
       }));
 
-      alert(`Шанс 100% установлен для цвета: ${color}!`);
+      alert(`🎯 Шанс 100% успешно установлен для цвета: ${color}!`);
     }
 
     function sendMyRoulette(targetName, isFriend) {
@@ -440,7 +529,7 @@
       };
 
       tg.sendData(JSON.stringify(payload));
-      alert(`Своя рулетка успешно отправлена пользователю ${targetName}!`);
+      alert(`Рулетка отправлена пользователю ${targetName}!`);
     }
 
     let activeSectors = [];
