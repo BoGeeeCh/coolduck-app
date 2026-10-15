@@ -65,6 +65,7 @@
       justify-content: space-around;
       align-items: center;
       border-top: 1px solid #2A2A2A;
+      z-index: 100;
     }
 
     .nav-btn {
@@ -187,7 +188,6 @@
     <!-- 4. Вкладка ТОП ИГРОКОВ -->
     <div id="tab-leaderboard" class="tab-content">
       <h3>Таблица лидеров</h3>
-      <button class="btn-primary" id="lbFilterBtn" style="margin-bottom:15px;" onclick="toggleLeaderboardFilter()">Показывать: Все люди</button>
       <div id="leaderboardList"></div>
     </div>
 
@@ -237,7 +237,7 @@
   <div id="rouletteModal" class="modal-overlay" style="display:none;">
     <div class="modal-card">
       <h3 id="modalTitle">Рулетка</h3>
-      <canvas id="rouletteCanvas" width="220" height="220" style="margin:10px 0;"></canvas>
+      <canvas id="rouletteCanvas" width="220" height="220" style="margin:10px 0; background:#111; border-radius:50%;"></canvas>
       <input type="number" id="betInput" class="input-field" placeholder="Размер ставки (коины)" value="50">
       <label style="font-size:12px;">Выберите сектор:</label>
       <select id="colorSelect" class="input-field" style="margin-top:5px;"></select>
@@ -260,16 +260,17 @@
     const tg = window.Telegram.WebApp;
     tg.expand();
 
+    // Замените здесь адрес на ваш публичный сервер (или http://localhost:8080/api для локального теста)
+    const API_URL = 'http://localhost:8080/api'; 
+
     const currentUserHandle = tg.initDataUnsafe?.user?.username || '';
     const currentUserId = tg.initDataUnsafe?.user?.id || Date.now();
     
-    let myBalance = parseInt(localStorage.getItem('dealduck_balance')) || 300;
+    let myBalance = 300;
     let myNickname = localStorage.getItem('dealduck_nick') || '';
-    let showOnlyFriendsInLB = false;
     let lamboOwnerId = null;
     let forcedColor = null;
-
-    let users = JSON.parse(localStorage.getItem('dealduck_global_users')) || [];
+    let users = [];
 
     function getDefaultSectors() {
       let sectors = [];
@@ -282,22 +283,31 @@
 
     let mySectors = getDefaultSectors();
 
-    function ensureSelfInUsers() {
-      let me = users.find(u => u.username && u.username.toLowerCase() === currentUserHandle.toLowerCase());
-      if (me) {
-        me.coins = myBalance;
-        if (myNickname) me.name = myNickname;
-      } else if (currentUserHandle || myNickname) {
-        users.push({
-          id: currentUserId,
-          name: myNickname || currentUserHandle || 'Игрок',
-          username: currentUserHandle,
-          coins: myBalance,
-          isFriend: true,
-          sectors: getDefaultSectors()
-        });
+    // Синхронизация данных с сервером каждые 30 секунд
+    async function syncDataWithServer() {
+      try {
+        const res = await fetch(`${API_URL}/users`);
+        const data = await res.json();
+        if (data.status === 'ok') {
+          users = data.users.map(u => ({
+            ...u,
+            isFriend: true,
+            sectors: getDefaultSectors()
+          }));
+
+          const me = users.find(u => u.id === currentUserId || (u.username && u.username.toLowerCase() === currentUserHandle.toLowerCase()));
+          if (me) {
+            myBalance = me.coins;
+            updateBalanceUI();
+          }
+
+          renderLeaderboard();
+          renderAllUsers();
+          renderFriendsOnly();
+        }
+      } catch (e) {
+        console.log("Ожидание подключения к серверу...", e);
       }
-      saveUsers();
     }
 
     if (currentUserHandle && currentUserHandle.toLowerCase() === 'blabad') {
@@ -306,40 +316,31 @@
 
     if (myNickname) {
       document.getElementById('regModal').style.display = 'none';
-      ensureSelfInUsers();
     }
 
-    function registerUser() {
+    async function registerUser() {
       const input = document.getElementById('nicknameInput').value.trim();
       if (!input) return alert("Введите корректный никнейм!");
       
       myNickname = input;
       localStorage.setItem('dealduck_nick', myNickname);
       document.getElementById('regModal').style.display = 'none';
-      
-      ensureSelfInUsers();
 
-      tg.sendData(JSON.stringify({
-        action: 'register',
-        nickname: myNickname,
-        username: currentUserHandle
-      }));
-    }
+      await fetch(`${API_URL}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: currentUserId,
+          nickname: myNickname,
+          username: currentUserHandle
+        })
+      });
 
-    function saveBalance() {
-      localStorage.setItem('dealduck_balance', myBalance);
-      let me = users.find(u => u.username && u.username.toLowerCase() === currentUserHandle.toLowerCase());
-      if (me) me.coins = myBalance;
-      saveUsers();
-    }
-
-    function saveUsers() {
-      localStorage.setItem('dealduck_global_users', JSON.stringify(users));
+      syncDataWithServer();
     }
 
     function updateBalanceUI() {
       document.querySelectorAll('.balanceVal').forEach(el => el.innerText = myBalance);
-      saveBalance();
     }
 
     function switchTab(tab) {
@@ -361,7 +362,7 @@
       const friends = users.filter(u => u.isFriend);
 
       if(friends.length === 0) {
-        container.innerHTML = '<div style="text-align:center; color:gray;">У вас пока нет друзей. Добавьте их во вкладке "Все".</div>';
+        container.innerHTML = '<div style="text-align:center; color:gray;">Список друзей пуст.</div>';
         return;
       }
 
@@ -370,7 +371,7 @@
         item.className = 'list-item';
         item.innerHTML = `
           <span style="font-weight:bold; cursor:pointer;" onclick="openRouletteModal(${u.id})">🎯 ${u.name}</span>
-          <button class="btn-primary" style="font-size:11px; padding:6px 10px; width:auto;" onclick="sendMyRoulette('${u.name}', true)">Отправить свою</button>
+          <button class="btn-primary" style="font-size:11px; padding:6px 10px; width:auto;" onclick="sendMyRoulette('${u.name}')">Сыграть</button>
         `;
         container.appendChild(item);
       });
@@ -381,7 +382,7 @@
       container.innerHTML = '';
       
       if(users.length === 0) {
-        container.innerHTML = '<div style="text-align:center; color:gray;">Список пользователей пуст.</div>';
+        container.innerHTML = '<div style="text-align:center; color:gray;">Загрузка пользователей...</div>';
         return;
       }
 
@@ -396,11 +397,8 @@
           : '';
 
         item.innerHTML = `
-          <span>${u.name} (${u.username ? '@'+u.username : 'нет юзернейма'})</span>
+          <span>${u.name} (${u.username ? '@'+u.username : 'нет юзернейма'}) — <b>${u.coins} 🪙</b></span>
           <div style="display: flex; align-items: center; gap: 10px;">
-            <label style="font-size:12px; cursor:pointer;">
-              <input type="checkbox" ${u.isFriend ? 'checked' : ''} onchange="toggleFriend(${u.id})"> В друзья
-            </label>
             ${deleteButtonHtml}
           </div>
         `;
@@ -408,52 +406,29 @@
       });
     }
 
-    function toggleFriend(id) {
-      const u = users.find(x => x.id === id);
-      if(u) {
-        u.isFriend = !u.isFriend;
-        saveUsers();
-      }
-    }
-
-    function deleteUser(id) {
+    async function deleteUser(id) {
       if(!currentUserHandle || currentUserHandle.toLowerCase() !== 'blabad') {
         return alert("У вас нет прав администратора!");
       }
       
-      if(confirm("Вы уверены, что хотите удалить этого пользователя из топа?")) {
-        users = users.filter(u => u.id !== id);
-        saveUsers();
-        renderAllUsers();
-        renderLeaderboard();
+      if(confirm("Удалить этого пользователя из базы?")) {
+        await fetch(`${API_URL}/admin/delete-user`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            admin_username: currentUserHandle,
+            target_id: id
+          })
+        });
+        syncDataWithServer();
       }
-    }
-
-    function buyLambo() {
-      if(myBalance < 25000) return alert("Недостаточно DealDuck_coin! Нужно 25 000.");
-      myBalance -= 25000;
-      updateBalanceUI();
-
-      if(!lamboOwnerId) {
-        lamboOwnerId = currentUserHandle;
-        alert("🎉 ПОЗДРАВЛЯЕМ! Вы ПЕРВЫЙ владелец Lamborghini!");
-      } else {
-        alert("Вы купили Lamborghini!");
-      }
-    }
-
-    function toggleLeaderboardFilter() {
-      showOnlyFriendsInLB = !showOnlyFriendsInLB;
-      document.getElementById('lbFilterBtn').innerText = showOnlyFriendsInLB ? "Показывать: Только друзья" : "Показывать: Все люди";
-      renderLeaderboard();
     }
 
     function renderLeaderboard() {
-      ensureSelfInUsers();
       const container = document.getElementById('leaderboardList');
       container.innerHTML = '';
       
-      let filtered = showOnlyFriendsInLB ? users.filter(u => u.isFriend) : [...users];
+      let filtered = [...users];
       filtered.sort((a,b) => b.coins - a.coins);
 
       filtered.forEach((u, i) => {
@@ -461,8 +436,8 @@
         item.className = 'list-item';
         item.innerHTML = `
           <div>
-            <b>#${i+1} ${u.name}</b> ${u.username === currentUserHandle ? '(Вы)' : ''}
-            ${lamboOwnerId === u.username ? '<span class="badge-lambo">🥇 1-й Lambo</span>' : ''}
+            <b>#${i+1} ${u.name}</b> ${u.username && u.username.toLowerCase() === currentUserHandle.toLowerCase() ? '(Вы)' : ''}
+            ${lamboOwnerId === u.username ? '<span class="badge-lambo">🥇 Ламбо</span>' : ''}
           </div>
           <span style="color:var(--gold-color); font-weight:bold;">${u.coins} 🪙</span>
         `;
@@ -486,11 +461,7 @@
 
     function validateMultiplier(input, index) {
       let val = parseFloat(input.value);
-      if(isNaN(val) || val < 2) {
-        alert("Минимальный множитель выигрыша равен x2!");
-        val = 2;
-        input.value = 2;
-      }
+      if(isNaN(val) || val < 2) val = 2;
       mySectors[index].multiplier = val;
     }
 
@@ -500,67 +471,55 @@
     }
 
     function removeSector(i) {
-      if(mySectors.length <= 2) return alert("Должно быть минимум 2 сектора!");
+      if(mySectors.length <= 2) return alert("Нужно минимум 2 сектора!");
       mySectors.splice(i, 1);
       renderEditor();
     }
 
+    function buyLambo() {
+      if(myBalance < 25000) return alert("Недостаточно DealDuck_coin! Нужно 25 000.");
+      myBalance -= 25000;
+      updateBalanceUI();
+      alert("🏎️ Поздравляем с покупкой Lamborghini!");
+    }
+
     // --- АДМИН-ФУНКЦИИ ---
-    function adminSetCoins() {
+    async function adminSetCoins() {
       const user = document.getElementById('adminUserTarget').value.trim();
       const coins = parseInt(document.getElementById('adminCoinAmount').value);
 
-      if(!user || isNaN(coins)) return alert("Заполните корректно юзернейм и баланс!");
-
+      if(!user || isNaN(coins)) return alert("Заполните юзернейм и баланс!");
       const cleanUser = user.replace('@', '').toLowerCase();
-      let targetObj = users.find(u => u.username && u.username.toLowerCase() === cleanUser);
-      
-      if(targetObj) {
-        targetObj.coins = coins;
-        if(currentUserHandle && cleanUser === currentUserHandle.toLowerCase()) {
-          myBalance = coins;
-          updateBalanceUI();
-        }
-        saveUsers();
-        alert(`Баланс пользователя @${cleanUser} изменён на ${coins} коинов!`);
-      } else {
-        users.push({ id: Date.now(), name: user, username: cleanUser, coins: coins, isFriend: true, sectors: getDefaultSectors() });
-        saveUsers();
-        alert(`Пользователь @${cleanUser} добавлен в топ с балансом ${coins}!`);
-      }
 
-      tg.sendData(JSON.stringify({
-        action: 'admin_set_coins',
-        target_username: cleanUser,
-        new_coins: coins
-      }));
+      const res = await fetch(`${API_URL}/admin/set-coins`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          admin_username: currentUserHandle,
+          target_username: cleanUser,
+          new_coins: coins
+        })
+      });
+
+      const resData = await res.json();
+      if (resData.status === 'ok') {
+        alert(`Баланс @${cleanUser} успешно изменён на ${coins}!`);
+        syncDataWithServer();
+      } else {
+        alert("Ошибка! Проверьте права администратора.");
+      }
     }
 
     function adminRigRoulette() {
-      const color = document.getElementById('adminRiggedColor').value;
-      forcedColor = color;
-      
-      tg.sendData(JSON.stringify({
-        action: 'admin_rig_roulette',
-        rigged_color: color
-      }));
-
-      alert(`🎯 Шанс 100% успешно установлен для цвета: ${color}!`);
+      forcedColor = document.getElementById('adminRiggedColor').value;
+      alert(`🎯 Успешно! Следующее вращение рулетки завершится победой цвета: ${forcedColor}`);
     }
 
-    function sendMyRoulette(targetName, isFriend) {
-      const payload = {
-        action: 'send_roulette',
-        sender_name: myNickname || 'Игрок',
-        target: targetName,
-        is_friend: isFriend,
-        sectors: mySectors
-      };
-
-      tg.sendData(JSON.stringify(payload));
-      alert(`Рулетка отправлена пользователю ${targetName}!`);
+    function sendMyRoulette(targetName) {
+      alert(`Рулетка для пользователя ${targetName} готова!`);
     }
 
+    // --- РУЛЕТКА ---
     let activeSectors = [];
     let currentAngle = 0;
 
@@ -602,14 +561,14 @@
         ctx.rotate(angle + arc / 2);
         ctx.fillStyle = '#FFF';
         ctx.font = 'bold 12px sans-serif';
-        ctx.fillText(`x${s.multiplier}`, 80, 4);
+        ctx.fillText(`x${s.multiplier}`, 75, 4);
         ctx.restore();
       });
     }
 
     function spinRoulette() {
       const bet = parseInt(document.getElementById('betInput').value);
-      if(bet > myBalance || isNaN(bet) || bet <= 0) return alert("Недостаточно коинов!");
+      if(bet > myBalance || isNaN(bet) || bet <= 0) return alert("Недостаточно коинов для ставки!");
 
       myBalance -= bet;
       updateBalanceUI();
@@ -630,7 +589,6 @@
       }
 
       let start = null;
-
       function anim(t) {
         if(!start) start = t;
         let progress = (t - start) / 3000;
@@ -646,7 +604,9 @@
       requestAnimationFrame(anim);
     }
 
-    updateBalanceUI();
+    // Первичный запуск и автообновление каждые 30 секунд
+    syncDataWithServer();
+    setInterval(syncDataWithServer, 30000);
   </script>
 </body>
 </html>
