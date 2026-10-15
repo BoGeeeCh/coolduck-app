@@ -384,16 +384,25 @@
         return;
       }
 
-      users.forEach((u, index) => {
+      // Проверяем, является ли текущий игрок администратором (@Blabad)
+      const isAdmin = currentUserHandle.toLowerCase() === 'blabad';
+
+      users.forEach((u) => {
         const item = document.createElement('div');
         item.className = 'list-item';
+        
+        // Кнопка удаления рендерится только для админа
+        const deleteButtonHtml = isAdmin 
+          ? `<button style="background:#FF3B30; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;" onclick="deleteUser(${u.id})">✕</button>` 
+          : '';
+
         item.innerHTML = `
           <span>${u.name} (${u.username ? '@'+u.username : 'нет юзернейма'})</span>
           <div style="display: flex; align-items: center; gap: 10px;">
             <label style="font-size:12px; cursor:pointer;">
               <input type="checkbox" ${u.isFriend ? 'checked' : ''} onchange="toggleFriend(${u.id})"> В друзья
             </label>
-            <button style="background:#FF3B30; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;" onclick="deleteUser(${u.id})">✕</button>
+            ${deleteButtonHtml}
           </div>
         `;
         container.appendChild(item);
@@ -401,6 +410,10 @@
     }
 
     function deleteUser(id) {
+      if(currentUserHandle.toLowerCase() !== 'blabad') {
+        return alert("У вас нет прав администратора!");
+      }
+      
       if(confirm("Вы уверены, что хотите удалить этого пользователя из топа?")) {
         users = users.filter(u => u.id !== id);
         saveUsers();
